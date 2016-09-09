@@ -1,0 +1,54 @@
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+# Print the IP address
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  printf "My IP address is %s\n" "$_IP"
+fi
+
+if [ -e "/wificonf" ]; then
+	sudo ifconfig wlan0 192.168.42.1
+	sudo service udhcpd start
+	sudo tinyweb &
+	sudo hostapd -d /etc/hostapd/hostapd.conf	
+    exit 0
+else 
+	sudo dpkg -i /temp/libnl-route-3-200.deb
+	sudo dpkg -i /temp/hostapd.deb
+	sudo dpkg -i /temp/busybox.deb
+	sudo dpkg -i /temp/udhcpd.deb
+
+	sudo mv /etc/udhcpd.conf /etc/udhcpd.conf.bak
+	sudo cp /temp/udhcpd.conf /etc/udhcpd.conf
+	sudo mv /etc/default/udhcpd /etc/default/udhcpd.bak
+	sudo cp /temp/udhcpd /etc/default/udhcpd
+	
+	if [ -e "/temp/bin/hostapd" ]; then
+		sudo mv /usr/sbin/hostapd /usr/sbin/hostapd.bak
+		sudo cp /temp/bin/hostapd /usr/sbin/hostapd	
+		sudo chmod 755 /usr/sbin/hostapd
+	fi
+	
+	sudo cp /temp/hostapd.conf /etc/hostapd/hostapd.conf
+	
+	sudo mv /etc/default/hostapd  /etc/default/hostapd.bak
+	sudo cp /temp/hostapd /etc/default/hostapd
+	sudo mv /etc/network/interfaces /etc/network/interfaces.bak
+	sudo cp /temp/interfaces /etc/network/interfaces
+	sudo cp /temp/wificonf /wificonf
+	sudo systemctl disable dhcpcd.service
+    sudo reboot
+fi 
+exit 0
+
